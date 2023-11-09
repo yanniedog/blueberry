@@ -1,4 +1,4 @@
-import csv
+NU nano 5.4                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              blueberry.py                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       import csv
 import os
 import re
 import subprocess
@@ -9,9 +9,10 @@ from datetime import datetime
 import time
 from colorama import Fore, Style, init
 
-# Configuration
 config = configparser.ConfigParser()
-config.read('config.me')
+config_file_path = 'config.me'
+print(f"Reading configuration from {config_file_path}")
+config.read(config_file_path)
 
 CSV_FILE_PATH = config.get('DEFAULT', 'CSV_FILE_PATH', fallback='~/blueberry/detected.csv')
 API_TOKEN = config.get('DEFAULT', 'API_TOKEN', fallback='your_api_token_here')
@@ -35,11 +36,10 @@ def color_rssi(value):
 
 def parse_btmgmt_output_line(line):
     additional_info = {}
-    name_match = re.search(r"name (.+)", line)
+    name_match = re.search(r"name\s'(.*?)'", line)  # Updated regular expression pattern
     if name_match:
         additional_info['name'] = name_match.group(1)
     return additional_info
-
 def get_oui_info(mac_address):
     if API_TOKEN == 'your_api_token_here':
         return {'organization_name': 'Unknown', 'assignment': '', 'organization_address': '', 'registry': ''}
@@ -151,16 +151,34 @@ def read_and_display_csv():
             for row in reader:
                 last_seen = row.get('Last Seen', '').ljust(20)
                 mac = row.get('MAC', '').ljust(20)
-                rssi = color_rssi(row.get('RSSI', '0'))
-                min_rssi = color_rssi(row.get('Min RSSI', '0'))
-                avg_rssi = color_rssi(row.get('Avg RSSI', '0'))
-                max_rssi = color_rssi(row.get('Max RSSI', '0'))
+                rssi = row.get('RSSI', '0')
+                min_rssi = row.get('Min RSSI', '0')
+                avg_rssi = row.get('Avg RSSI', '0')
+                max_rssi = row.get('Max RSSI', '0')
                 name = row.get('Name', '').ljust(20)
                 manufacturer = row.get('Manufacturer', '').ljust(30)
                 assignment = row.get('Assignment', '').ljust(12)
                 organization_address = row.get('Organization Address', '').ljust(30)
                 registry = row.get('Registry', '').ljust(10)
-                print(f"{last_seen} {mac} {rssi.ljust(7 + (7 - character_width(rssi)))} {min_rssi.ljust(7 + (7 - character_width(min_rssi)))} {avg_rssi.ljust(7 + (7 - character_width(avg_rssi)))} {max_rssi.ljust(7 + (7 - character_width(max_rssi)))} {name} {manufacturer} {assignment} {organization_address} {registry}")
+
+                # Apply color and calculate the length of non-printing color characters
+                rssi_colored = color_rssi(rssi)
+                non_printing_length_rssi = len(rssi_colored) - len(rssi)
+                rssi_padded = rssi_colored.ljust(7 + non_printing_length_rssi)
+
+                min_rssi_colored = color_rssi(min_rssi)
+                non_printing_length_min_rssi = len(min_rssi_colored) - len(min_rssi)
+                min_rssi_padded = min_rssi_colored.ljust(7 + non_printing_length_min_rssi)
+
+                avg_rssi_colored = color_rssi(avg_rssi)
+                non_printing_length_avg_rssi = len(avg_rssi_colored) - len(avg_rssi)
+                avg_rssi_padded = avg_rssi_colored.ljust(7 + non_printing_length_avg_rssi)
+
+                max_rssi_colored = color_rssi(max_rssi)
+                non_printing_length_max_rssi = len(max_rssi_colored) - len(max_rssi)
+                max_rssi_padded = max_rssi_colored.ljust(7 + non_printing_length_max_rssi)
+
+                print(f"{last_seen} {mac} {rssi_padded} {min_rssi_padded} {avg_rssi_padded} {max_rssi_padded} {name} {manufacturer} {assignment} {organization_address} {registry}")
     else:
         print("No data found in the CSV file.")
 
@@ -170,3 +188,11 @@ if __name__ == "__main__":
         process_btmgmt_output()
         read_and_display_csv()
         time.sleep(10)
+
+
+
+
+
+
+
+
