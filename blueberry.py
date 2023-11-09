@@ -4,10 +4,12 @@ import re
 import subprocess
 import requests
 import configparser
+import unicodedata
 from datetime import datetime
 import time
 from colorama import Fore, Style, init
 
+# Configuration
 config = configparser.ConfigParser()
 config.read('config.me')
 
@@ -15,8 +17,10 @@ CSV_FILE_PATH = config.get('DEFAULT', 'CSV_FILE_PATH', fallback='~/blueberry/det
 API_TOKEN = config.get('DEFAULT', 'API_TOKEN', fallback='your_api_token_here')
 
 init(autoreset=True)
-CSV_FILE_PATH = '~/blueberry/detected.csv'
-API_TOKEN = "your_api_token_here"
+
+# Helper Functions
+def character_width(s):
+    return sum(1 + (unicodedata.east_asian_width(c) in ('F', 'W')) for c in s)
 
 def color_rssi(value):
     if not value:
@@ -145,21 +149,22 @@ def read_and_display_csv():
             reader = csv.DictReader(csvfile)
             print(f"{'Last Seen':<20} {'MAC':<20} {'RSSI':<7} {'Min':<7} {'Avg':<7} {'Max':<7} {'Name':<20} {'Manufacturer':<30} {'Assignment':<12} {'Organization Address':<30} {'Registry':<10}")
             for row in reader:
-                last_seen = row.get('Last Seen', '')
-                mac = row.get('MAC', '')
+                last_seen = row.get('Last Seen', '').ljust(20)
+                mac = row.get('MAC', '').ljust(20)
                 rssi = color_rssi(row.get('RSSI', '0'))
                 min_rssi = color_rssi(row.get('Min RSSI', '0'))
                 avg_rssi = color_rssi(row.get('Avg RSSI', '0'))
                 max_rssi = color_rssi(row.get('Max RSSI', '0'))
-                name = row.get('Name', '')
-                manufacturer = row.get('Manufacturer', '')
-                assignment = row.get('Assignment', '')
-                organization_address = row.get('Organization Address', '')
-                registry = row.get('Registry', '')
-                print(f"{last_seen:<20} {mac:<20} {rssi:<7} {min_rssi:<7} {avg_rssi:<7} {max_rssi:<7} {name:<20} {manufacturer:<30} {assignment:<12} {organization_address:<30} {registry:<10}")
+                name = row.get('Name', '').ljust(20)
+                manufacturer = row.get('Manufacturer', '').ljust(30)
+                assignment = row.get('Assignment', '').ljust(12)
+                organization_address = row.get('Organization Address', '').ljust(30)
+                registry = row.get('Registry', '').ljust(10)
+                print(f"{last_seen} {mac} {rssi.ljust(7 + (7 - character_width(rssi)))} {min_rssi.ljust(7 + (7 - character_width(min_rssi)))} {avg_rssi.ljust(7 + (7 - character_width(avg_rssi)))} {max_rssi.ljust(7 + (7 - character_width(max_rssi)))} {name} {manufacturer} {assignment} {organization_address} {registry}")
     else:
         print("No data found in the CSV file.")
 
+# Main Loop
 if __name__ == "__main__":
     while True:
         process_btmgmt_output()
