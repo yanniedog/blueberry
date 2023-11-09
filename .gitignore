@@ -3,8 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-config.me
-
 # Virtual environment
 venv/
 
@@ -21,3 +19,6 @@ detected.csv
 # Log files
 *.log
 *.swp
+
+# Sensitive info
+config.me

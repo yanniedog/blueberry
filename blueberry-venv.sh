@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Path to the directory where blueberry.py and the virtual environment are located
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+# Define the actual directory of the blueberry installation
+BLUEBERRY_DIR="$HOME/blueberry"
 
 # Activate the virtual environment
-source "$DIR/venv/bin/activate"
+source "$BLUEBERRY_DIR/venv/bin/activate"
 
 # Run the blueberry.py script
-python "$DIR/blueberry.py"
+python "$BLUEBERRY_DIR/blueberry.py"
 
 # Deactivate the virtual environment when done
 deactivate

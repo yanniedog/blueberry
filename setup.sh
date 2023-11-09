@@ -59,22 +59,22 @@ pip install -r requirements.txt || error_exit "Failed to install Python packages
 make_executable "blueberry.py"
 
 # Create the blueberry-venv.sh wrapper script
-cat > blueberry-venv.sh <<'EOF'
+cat > "$directory/blueberry-venv.sh" <<EOF
 #!/bin/bash
 
-# Path to the directory where blueberry.py and the virtual environment are located
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+# Define the actual directory of the blueberry installation
+BLUEBERRY_DIR="$directory"
 
 # Activate the virtual environment
-source "$DIR/venv/bin/activate"
+source "\$BLUEBERRY_DIR/venv/bin/activate"
 
 # Run the blueberry.py script
-python "$DIR/blueberry.py"
+python "\$BLUEBERRY_DIR/blueberry.py"
 
 # Deactivate the virtual environment when done
 deactivate
 EOF
-make_executable "blueberry-venv.sh"
+make_executable "$directory/blueberry-venv.sh"
 
 # Create the local bin directory if it doesn't exist
 create_directory "$LOCAL_BIN"
@@ -98,9 +98,9 @@ while true; do
     case $response in
         [Yy])
             read -p "Enter your macvendors API token: " macvendors_api_token
-            cat >config.me <<EOF
+            cat >"$directory/config.me" <<EOF
 [DEFAULT]
-CSV_FILE_PATH = ~/blueberry/detected.csv
+CSV_FILE_PATH = $directory/detected.csv
 API_TOKEN = $macvendors_api_token
 EOF
             break
@@ -118,4 +118,4 @@ done
 echo -e "\033[94mSetup completed successfully.\033[0m"
 echo -e "Type '\033[94mblueberry\033[0m' to start scanning for Bluetooth devices."
 echo "To stop the script, press Ctrl+C."
-echo "The generated CSV file can be found at: $HOME/blueberry/detected.csv"
+echo "The generated CSV file can be found at: $directory/detected.csv"
