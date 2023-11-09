@@ -1,7 +1,9 @@
 #!/bin/bash
 
+echo
 echo -e "\033[94mBeginning the Blueberry setup...\033[0m"
 echo "Please wait while we prepare everything for you."
+echo
 
 # Check if Python3 and pip are installed, and if not, exit with an error message
 command -v python3 &>/dev/null || { echo "Error: Python3 is required but not found. Please install it."; exit 1; }
@@ -64,7 +66,10 @@ fi
 # Deactivate the virtual environment
 deactivate
 
-echo -e "\033[94mSetup completed successfully.\033[0m"
+echo
+echo "Setup completed successfully."
+echo
 echo -e "Type '\033[94mblueberry\033[0m' to start scanning for bluetooth devices."
 echo "To stop the script, press Ctrl+C."
 echo "The generated CSV file can be found at: $HOME/blueberry/detected.csv"
+echo
