@@ -69,7 +69,22 @@ deactivate
 echo
 echo "Setup completed successfully."
 echo
-echo -e "Type '\033[94mblueberry\033[0m' to start scanning for bluetooth devices."
+
+# Check if user has a macvendors API token and update the config file
+read -p "Do you have a macvendors API token? (y/n): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    read -p "Enter your macvendors API token: " macvendors_api_token
+    echo "Updating the config file with the API token..."
+    echo "[DEFAULT]" > config.me
+    echo "CSV_FILE_PATH = ~/blueberry/detected.csv" >> config.me
+    echo "API_TOKEN = $macvendors_api_token" >> config.me
+else
+    echo "Proceeding without macvendors API token..."
+fi
+
+echo
+echo -e "Type '\033[94mblueberry\033[0m' to start scanning for Bluetooth devices."
 echo "To stop the script, press Ctrl+C."
 echo "The generated CSV file can be found at: $HOME/blueberry/detected.csv"
 echo
