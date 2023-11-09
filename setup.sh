@@ -66,6 +66,9 @@ fi
 # Deactivate the virtual environment
 deactivate
 
+# Make blueberry.py executable (added this line)
+chmod +x "$directory/blueberry.py"
+
 echo
 echo "Setup completed successfully."
 echo
