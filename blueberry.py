@@ -5,9 +5,10 @@ import subprocess
 import requests
 import configparser
 import unicodedata
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 from colorama import Fore, Style, init
+import statistics
 
 config = configparser.ConfigParser()
 config_file_path = 'config.me'
@@ -40,6 +41,7 @@ def parse_btmgmt_output_line(line):
     if name_match:
         additional_info['name'] = name_match.group(1)
     return additional_info
+
 def get_oui_info(mac_address):
     if API_TOKEN == 'your_api_token_here':
         return {'organization_name': 'Unknown', 'assignment': '', 'organization_address': '', 'registry': ''}
@@ -90,7 +92,7 @@ def process_btmgmt_output():
 
 def create_csv_file():
     with open(os.path.expanduser(CSV_FILE_PATH), 'w', newline='') as csvfile:
-        fieldnames = ['Last Seen', 'MAC', 'RSSI', 'Min RSSI', 'Avg RSSI', 'Max RSSI', 'Name', 'Manufacturer', 'Assignment', 'Organization Address', 'Registry']
+        fieldnames = ['Last Seen', 'MAC', 'RSSI', 'Min RSSI', 'Mean RSSI', 'Max RSSI', 'sd', 'Dur', 'Name', 'Manufacturer', 'Assignment', 'Organization Address', 'Registry']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
 
@@ -102,7 +104,7 @@ def read_csv_file():
 
 def write_csv_file(updated_rows):
     with open(os.path.expanduser(CSV_FILE_PATH), 'w', newline='') as csvfile:
-        fieldnames = ['Last Seen', 'MAC', 'RSSI', 'Min RSSI', 'Avg RSSI', 'Max RSSI', 'Name', 'Manufacturer', 'Assignment', 'Organization Address', 'Registry']
+        fieldnames = ['Last Seen', 'MAC', 'RSSI', 'Min RSSI', 'Mean RSSI', 'Max RSSI', 'sd', 'Dur', 'Name', 'Manufacturer', 'Assignment', 'Organization Address', 'Registry']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         for row in updated_rows:
@@ -122,10 +124,16 @@ def update_csv(found_devices):
             rssi = int(device['RSSI'])
             min_rssi = min(int(row.get('Min RSSI', rssi)), rssi)
             max_rssi = max(int(row.get('Max RSSI', rssi)), rssi)
-            avg_rssi = (int(row.get('Avg RSSI', rssi)) + rssi) // 2
+            mean_rssi = (int(row.get('Mean RSSI', rssi)) + rssi) // 2
             last_seen = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             oui_data = device['OUI_Data']
-            updated_row = {'Last Seen': last_seen, 'MAC': mac, 'RSSI': rssi, 'Min RSSI': min_rssi, 'Avg RSSI': avg_rssi, 'Max RSSI': max_rssi, 'Name': device['Name'],
+            name = device['Name']
+            rssi_list = row.get('rssi_list', [])
+            rssi_list.append(rssi)
+            sd = statistics.stdev(rssi_list) if len(rssi_list) > 1 else 0
+            first_seen = row.get('First Seen', last_seen)
+            dur = str(timedelta(seconds=(datetime.strptime(last_seen, '%Y-%m-%d %H:%M:%S') - datetime.strptime(first_seen, '%Y-%m-%d %H:%M:%S')).total_seconds())).split('.')[0]
+            updated_row = {'Last Seen': last_seen, 'MAC': mac, 'RSSI': rssi, 'Min RSSI': min_rssi, 'Mean RSSI': mean_rssi, 'Max RSSI': max_rssi, 'sd': sd, 'Dur': dur, 'Name': name,
                            'Manufacturer': oui_data['organization_name'], 'Assignment': oui_data['assignment'], 'Organization Address': oui_data['organization_address'], 'Registry': oui_data['registry']}
             updated_rows.append(updated_row)
             del found_devices[mac]
@@ -136,7 +144,12 @@ def update_csv(found_devices):
         rssi = int(device['RSSI'])
         last_seen = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         oui_data = device['OUI_Data']
-        new_row = {'Last Seen': last_seen, 'MAC': mac, 'RSSI': rssi, 'Min RSSI': rssi, 'Avg RSSI': rssi, 'Max RSSI': rssi, 'Name': device['Name'],
+        name = device['Name']
+        sd = 0
+        dur = '00:00:00'
+        rssi_list = [rssi]
+        first_seen = last_seen
+        new_row = {'Last Seen': last_seen, 'MAC': mac, 'RSSI': rssi, 'Min RSSI': rssi, 'Mean RSSI': rssi, 'Max RSSI': rssi, 'sd': sd, 'Dur': dur, 'Name': name,
                    'Manufacturer': oui_data['organization_name'], 'Assignment': oui_data['assignment'], 'Organization Address': oui_data['organization_address'], 'Registry': oui_data['registry']}
         updated_rows.append(new_row)
 
@@ -147,14 +160,16 @@ def read_and_display_csv():
     if os.path.exists(os.path.expanduser(CSV_FILE_PATH)) and os.path.getsize(os.path.expanduser(CSV_FILE_PATH)) > 0:
         with open(os.path.expanduser(CSV_FILE_PATH), mode='r', newline='') as csvfile:
             reader = csv.DictReader(csvfile)
-            print(f"{'Last Seen':<20} {'MAC':<20} {'RSSI':<7} {'Min':<7} {'Avg':<7} {'Max':<7} {'Name':<20} {'Manufacturer':<30} {'Assignment':<12} {'Organization Address':<30} {'Registry':<10}")
+            print(f"{'Last Seen':<20} {'MAC':<20} {'RSSI':<7} {'Min':<7} {'Mean':<7} {'Max':<7} {'sd':<7} {'Dur':<10} {'Name':<20} {'Manufacturer':<30} {'Assignment':<12} {'Organization Address':<30} {'Registry':<10}")
             for row in reader:
                 last_seen = row.get('Last Seen', '').ljust(20)
                 mac = row.get('MAC', '').ljust(20)
                 rssi = row.get('RSSI', '0')
                 min_rssi = row.get('Min RSSI', '0')
-                avg_rssi = row.get('Avg RSSI', '0')
+                mean_rssi = row.get('Mean RSSI', '0')
                 max_rssi = row.get('Max RSSI', '0')
+                sd = row.get('sd', '0')
+                dur = row.get('Dur', '00:00:00').ljust(10)
                 name = row.get('Name', '').ljust(20)
                 manufacturer = row.get('Manufacturer', '').ljust(30)
                 assignment = row.get('Assignment', '').ljust(12)
@@ -170,15 +185,15 @@ def read_and_display_csv():
                 non_printing_length_min_rssi = len(min_rssi_colored) - len(min_rssi)
                 min_rssi_padded = min_rssi_colored.ljust(7 + non_printing_length_min_rssi)
 
-                avg_rssi_colored = color_rssi(avg_rssi)
-                non_printing_length_avg_rssi = len(avg_rssi_colored) - len(avg_rssi)
-                avg_rssi_padded = avg_rssi_colored.ljust(7 + non_printing_length_avg_rssi)
+                mean_rssi_colored = color_rssi(mean_rssi)
+                non_printing_length_mean_rssi = len(mean_rssi_colored) - len(mean_rssi)
+                mean_rssi_padded = mean_rssi_colored.ljust(7 + non_printing_length_mean_rssi)
 
                 max_rssi_colored = color_rssi(max_rssi)
                 non_printing_length_max_rssi = len(max_rssi_colored) - len(max_rssi)
                 max_rssi_padded = max_rssi_colored.ljust(7 + non_printing_length_max_rssi)
 
-                print(f"{last_seen} {mac} {rssi_padded} {min_rssi_padded} {avg_rssi_padded} {max_rssi_padded} {name} {manufacturer} {assignment} {organization_address} {registry}")
+                print(f"{last_seen} {mac} {rssi_padded} {min_rssi_padded} {mean_rssi_padded} {max_rssi_padded} {sd:<7} {dur} {name} {manufacturer} {assignment} {organization_address} {registry}")
     else:
         print("No data found in the CSV file.")
 
@@ -188,11 +203,3 @@ if __name__ == "__main__":
         process_btmgmt_output()
         read_and_display_csv()
         time.sleep(10)
-
-
-
-
-
-
-
-
