@@ -2,14 +2,18 @@ import csv
 import os
 import re
 import subprocess
+import configparser
 import requests
 from datetime import datetime
 import time
 from colorama import Fore, Style, init
 
 init(autoreset=True)
-CSV_FILE_PATH = '~/blueberry/detected.csv'
-API_TOKEN = "your_api_token_here"
+config = configparser.ConfigParser()
+config.read('config.me')
+
+CSV_FILE_PATH = config.get('DEFAULT', 'CSV_FILE_PATH', fallback='~/blueberry/detected.csv')
+API_TOKEN = config.get('DEFAULT', 'API_TOKEN', fallback='your_api_token_here')
 
 def color_rssi(value):
     if not value:
@@ -30,22 +34,24 @@ def parse_btmgmt_output_line(line):
     return additional_info
 
 def get_oui_info(mac_address):
-    api_token = API_TOKEN
-    mac_address_formatted = mac_address.replace(':', '').upper()
-    url = f"https://api.macvendors.com/v1/lookup/{mac_address_formatted}"
-    headers = {
-        "Authorization": f"Bearer {api_token}",
-        "Accept": "application/json"
-    }
-    try:
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            json_response = response.json()
-            return json_response['data']
-        else:
+    if API_TOKEN == 'your_api_token_here':
+        return {'organization_name': 'Unknown', 'assignment': '', 'organization_address': '', 'registry': ''}
+    else:
+        mac_address_formatted = mac_address.replace(':', '').upper()
+        url = f"https://api.macvendors.com/v1/lookup/{mac_address_formatted}"
+        headers = {
+            "Authorization": f"Bearer {API_TOKEN}",
+            "Accept": "application/json"
+        }
+        try:
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                json_response = response.json()
+                return json_response['data']
+            else:
+                return {'organization_name': '', 'assignment': '', 'organization_address': '', 'registry': ''}
+        except requests.exceptions.RequestException:
             return {'organization_name': '', 'assignment': '', 'organization_address': '', 'registry': ''}
-    except requests.exceptions.RequestException:
-        return {'organization_name': '', 'assignment': '', 'organization_address': '', 'registry': ''}
 
 def process_btmgmt_output():
     found_devices = {}
