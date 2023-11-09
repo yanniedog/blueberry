@@ -1,5 +1,8 @@
 #!/bin/bash
 
+echo "Beginning the Blueberry setup..."
+echo "Please wait while we prepare everything for you."
+
 # Check if Python3 and pip are installed, and if not, exit with an error message
 command -v python3 &>/dev/null || { echo "Error: Python3 is required but not found. Please install it."; exit 1; }
 command -v pip &>/dev/null || { echo "Error: Pip is required but not found. Please install it."; exit 1; }
@@ -49,7 +52,3 @@ echo "Setup completed successfully."
 echo -e "Type '\033[1mblueberry\033[0m' to start the script."
 echo "To stop the script, press Ctrl+C."
 echo "The generated CSV file can be found at: $HOME/blueberry/output.csv"
-
-
-
-
