@@ -24,8 +24,10 @@ if ! git clone https://github.com/yanniedog/blueberry.git .; then
     display_error "Failed to clone the repository."
 fi
 
-# Rename the setup script to setup_blueberry.py
-mv setup_blueberry.py setup.py || display_error "Failed to rename the setup script to 'setup.py'."
+# Check if 'setup_blueberry.py' exists, and if so, rename it to 'setup.py'
+if [ -f setup_blueberry.py ]; then
+  mv setup_blueberry.py setup.py || display_error "Failed to rename the setup script to 'setup.py'."
+fi
 
 # Create a virtual environment
 python3 -m venv venv || display_error "Failed to create the virtual environment."
