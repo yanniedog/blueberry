@@ -115,10 +115,11 @@ EOF
     esac
 done
 
+# ... [rest of the script]
+
 echo -e "\033[94mSetup completed successfully.\033[0m"
 echo -e "Type '\033[94mblueberry\033[0m' to start scanning for Bluetooth devices."
 echo "To stop the script, press Ctrl+C."
 echo "The generated CSV file can be found at: $directory/detected.csv"
+echo "Please run 'source ~/.bashrc' to update your shell environment."
 
-# Add sourcing of .bashrc to apply the PATH update
-source ~/.bashrc
