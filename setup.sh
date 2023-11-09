@@ -46,3 +46,10 @@ fi
 deactivate
 
 echo "Setup completed successfully."
+echo -e "Type '\033[1mblueberry\033[0m' to start the script."
+echo "To stop the script, press Ctrl+C."
+echo "The generated CSV file can be found at: $HOME/blueberry/output.csv"
+
+
+
+
