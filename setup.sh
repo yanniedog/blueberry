@@ -13,7 +13,21 @@ HOME_DIR=$(eval echo ~$USER)
 # Set the directory path within the user's home directory
 directory="$HOME_DIR/blueberry"
 
-# Create the directory if it doesn't exist
+# If a previous installation is detected, offer to reinstall
+if [ -d "$directory" ]; then
+    echo "Previous installation detected at $directory."
+    read -p "Would you like to reinstall? (y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        rm -rf "$directory"
+        echo "Previous installation removed."
+    else
+        echo "Installation aborted."
+        exit 1
+    fi
+fi
+
+# Create the directory
 mkdir -p "$directory" || { echo "Error: Failed to create the 'blueberry' directory."; exit 1; }
 
 # Change to the blueberry directory
@@ -51,4 +65,4 @@ deactivate
 echo "Setup completed successfully."
 echo -e "Type '\033[1mblueberry\033[0m' to start the script."
 echo "To stop the script, press Ctrl+C."
-echo "The generated CSV file can be found at: $HOME/blueberry/output.csv"
+echo "The generated CSV file can be found at: $HOME/blueberry/detected.csv"
