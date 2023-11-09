@@ -1,4 +1,4 @@
-# Blueberry Bluetooth Tracker
+# Blueberry: Bluetooth Scanner for Raspberry Pi
 
 ## Overview
 Blueberry is a tool for tracking Bluetooth devices using a Raspberry Pi. It scans for devices, logs their signal strength (RSSI), and other details, then saves the data to a CSV file for later analysis.
