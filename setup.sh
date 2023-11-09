@@ -72,21 +72,25 @@ echo
 
 # Check if user has a macvendors API token and update the config file
 while true; do
-    read -p "Do you have a macvendors API token? (y/n): " -n 1 -r
+    read -p "Do you have a macvendors API token? (y/n): " -n 1 -r response
     echo
-    if [[ $REPLY == [Yy] ]]; then
-        read -p "Enter your macvendors API token: " macvendors_api_token
-        echo "Updating the config file with the API token..."
-        echo "[DEFAULT]" > config.me
-        echo "CSV_FILE_PATH = ~/blueberry/detected.csv" >> config.me
-        echo "API_TOKEN = $macvendors_api_token" >> config.me
-        break  # Exit the loop when 'y' is provided
-    elif [[ $REPLY == [Nn] ]]; then
-        echo "Proceeding without macvendors API token..."
-        break  # Exit the loop when 'n' is provided
-    else
-        echo "Invalid input. Please enter 'y' for yes or 'n' for no."
-    fi
+    case $response in
+        [Yy])
+            read -p "Enter your macvendors API token: " macvendors_api_token
+            echo "Updating the config file with the API token..."
+            echo "[DEFAULT]" > config.me
+            echo "CSV_FILE_PATH = ~/blueberry/detected.csv" >> config.me
+            echo "API_TOKEN = $macvendors_api_token" >> config.me
+            break  # Exit the loop when 'y' is provided
+            ;;
+        [Nn])
+            echo "Proceeding without macvendors API token..."
+            break  # Exit the loop when 'n' is provided
+            ;;
+        *)
+            echo "Invalid input. Please enter 'y' for yes or 'n' for no."
+            ;;
+    esac
 done
 
 echo
