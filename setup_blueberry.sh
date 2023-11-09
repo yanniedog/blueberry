@@ -11,13 +11,21 @@ if ! command -v python3 &>/dev/null || ! command -v pip &>/dev/null; then
     display_error "Python3 and pip are required but not found. Please install them."
 fi
 
+# Create the blueberry directory if it doesn't exist
+if [ ! -d "/home/pi/blueberry" ]; then
+    mkdir /home/pi/blueberry || display_error "Failed to create the 'blueberry' directory."
+fi
+
+# Change to the blueberry directory
+cd /home/pi/blueberry || display_error "Failed to change directory to '/home/pi/blueberry'."
+
 # Clone the GitHub repository
-if ! git clone https://github.com/yanniedog/bt.git; then
+if ! git clone https://github.com/yanniedog/blueberry.git .; then
     display_error "Failed to clone the repository."
 fi
 
-# Change to the bt directory
-cd bt || display_error "Failed to change directory to 'bt'."
+# Rename the setup script to setup_blueberry.py
+mv setup_blueberry.py setup.py || display_error "Failed to rename the setup script to 'setup.py'."
 
 # Create a virtual environment
 python3 -m venv venv || display_error "Failed to create the virtual environment."
