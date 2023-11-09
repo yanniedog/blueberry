@@ -29,8 +29,18 @@ pip install -r requirements.txt || { echo "Error: Failed to install Python packa
 # Make the blueberry.py script executable
 chmod +x blueberry.py || { echo "Error: Failed to make the 'blueberry.py' script executable."; exit 1; }
 
-# Create a symbolic link in /usr/local/bin
-ln -sf "$directory/blueberry.py" /usr/local/bin/blueberry || { echo "Error: Failed to create a symbolic link."; exit 1; }
+# Check if the local bin directory exists, if not create it
+LOCAL_BIN="$HOME_DIR/.local/bin"
+mkdir -p "$LOCAL_BIN"
+
+# Create a symbolic link in the local bin directory
+ln -sf "$directory/blueberry.py" "$LOCAL_BIN/blueberry" || { echo "Error: Failed to create a symbolic link."; exit 1; }
+
+# Add local bin directory to PATH if it's not already there
+if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
+    echo "export PATH=\"\$PATH:$LOCAL_BIN\"" >> "$HOME_DIR/.bashrc"
+    echo "Local bin directory added to PATH. Please restart your terminal or source ~/.bashrc to apply changes."
+fi
 
 # Deactivate the virtual environment
 deactivate
