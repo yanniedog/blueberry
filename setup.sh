@@ -63,6 +63,6 @@ fi
 deactivate
 
 echo "Setup completed successfully."
-echo -e "Type '\033[1mblueberry\033[0m' to start the script."
+echo -e "Type '\033[1;94mblue\033[0m\033[1;95mberry\033[0m' to start the script."
 echo "To stop the script, press Ctrl+C."
 echo "The generated CSV file can be found at: $HOME/blueberry/detected.csv"
