@@ -1,2 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+
+# Output file
 detected.csv
 
+# Editor directories and files
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+
+# Log files
+*.log
+*.swp
