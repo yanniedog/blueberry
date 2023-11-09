@@ -71,17 +71,23 @@ echo "Setup completed successfully."
 echo
 
 # Check if user has a macvendors API token and update the config file
-read -p "Do you have a macvendors API token? (y/n): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    read -p "Enter your macvendors API token: " macvendors_api_token
-    echo "Updating the config file with the API token..."
-    echo "[DEFAULT]" > config.me
-    echo "CSV_FILE_PATH = ~/blueberry/detected.csv" >> config.me
-    echo "API_TOKEN = $macvendors_api_token" >> config.me
-else
-    echo "Proceeding without macvendors API token..."
-fi
+while true; do
+    read -p "Do you have a macvendors API token? (y/n): " -n 1 -r
+    echo
+    if [[ $REPLY == [Yy] ]]; then
+        read -p "Enter your macvendors API token: " macvendors_api_token
+        echo "Updating the config file with the API token..."
+        echo "[DEFAULT]" > config.me
+        echo "CSV_FILE_PATH = ~/blueberry/detected.csv" >> config.me
+        echo "API_TOKEN = $macvendors_api_token" >> config.me
+        break  # Exit the loop when 'y' is provided
+    elif [[ $REPLY == [Nn] ]]; then
+        echo "Proceeding without macvendors API token..."
+        break  # Exit the loop when 'n' is provided
+    else
+        echo "Invalid input. Please enter 'y' for yes or 'n' for no."
+    fi
+done
 
 echo
 echo -e "Type '\033[94mblueberry\033[0m' to start scanning for Bluetooth devices."
