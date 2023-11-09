@@ -50,10 +50,13 @@ def get_oui_info(mac_address):
 
 def process_btmgmt_output():
     found_devices = {}
-    process = subprocess.Popen(['btmgmt', 'find'], stdout=subprocess.PIPE, text=True)
+    process = subprocess.Popen(['sudo', 'btmgmt', 'find'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     additional_info = {}
     try:
-        for line in process.stdout:
+        while True:
+            line = process.stdout.readline()
+            if not line:
+                break
             additional_info = parse_btmgmt_output_line(line)
             if "dev_found" in line:
                 mac_address_match = re.search(r": ([\dA-F]{2}:[\dA-F]{2}:[\dA-F]{2}:[\dA-F]{2}:[\dA-F]{2}:[\dA-F]{2})", line)
