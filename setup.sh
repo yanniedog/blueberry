@@ -58,11 +58,29 @@ pip install -r requirements.txt || error_exit "Failed to install Python packages
 # Make the blueberry.py script executable
 make_executable "blueberry.py"
 
+# Create the blueberry-venv.sh wrapper script
+cat > blueberry-venv.sh <<'EOF'
+#!/bin/bash
+
+# Path to the directory where blueberry.py and the virtual environment are located
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+# Activate the virtual environment
+source "$DIR/venv/bin/activate"
+
+# Run the blueberry.py script
+python "$DIR/blueberry.py"
+
+# Deactivate the virtual environment when done
+deactivate
+EOF
+make_executable "blueberry-venv.sh"
+
 # Create the local bin directory if it doesn't exist
 create_directory "$LOCAL_BIN"
 
-# Create a symbolic link in the local bin directory
-ln -sf "$directory/blueberry.py" "$LOCAL_BIN/blueberry" || error_exit "Failed to create a symbolic link."
+# Update the symbolic link to point to the wrapper script
+ln -sf "$directory/blueberry-venv.sh" "$LOCAL_BIN/blueberry" || error_exit "Failed to create a symbolic link."
 
 # Add local bin directory to PATH if it's not already there
 [[ ":$PATH:" != *":$LOCAL_BIN:"* ]] && {
