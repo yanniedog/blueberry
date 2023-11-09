@@ -4,7 +4,7 @@
 Blueberry is a tool for tracking Bluetooth devices using a Raspberry Pi. It scans for devices, logs their signal strength (RSSI), and other details, then saves the data to a CSV file for later analysis.
 
 ## Prerequisites
-- Raspberry Pi 4B with Raspbian OS (Bookworm)
+- Raspberry Pi with Raspbian OS (Bookworm)
 - Python 3.x
 - Git
 - pip
@@ -14,7 +14,7 @@ Blueberry is a tool for tracking Bluetooth devices using a Raspberry Pi. It scan
 To install Blueberry, run the following command in your terminal:
 
 ```sh
-bash <(curl -s https://raw.githubusercontent.com/yanniedog/blueberry/master/setup.py)
+bash <(curl -s https://raw.githubusercontent.com/yanniedog/blueberry/master/setup.sh)
 ```
 
 This command downloads and executes the setup script, which will:
