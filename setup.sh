@@ -15,15 +15,17 @@ directory="$HOME_DIR/blueberry"
 
 # If a previous installation is detected, offer to reinstall
 if [ -d "$directory" ]; then
-    echo "Previous installation detected at $directory."
-    read -p "Would you like me to delete this directory and reinstall blueberry? (y/n): " -n 1 -r
+    echo -e "Previous installation detected at $directory."
+    echo "Reinstalling will delete the current directory and its contents."
+    read -p "Would you like to proceed with reinstalling? (y/n): " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo "Deleting the existing directory and reinstalling..."
         rm -rf "$directory"
         echo "Previous installation removed."
     else
         echo "Installation aborted."
-        exit 1;
+        exit 1
     fi
 fi
 
