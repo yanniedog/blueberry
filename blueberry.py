@@ -31,12 +31,18 @@ def parse_btmgmt_output_line(line):
     return additional_info
 
 def get_oui_info(mac_address):
-    oui = mac_address[:8].replace(':', '-').upper()
-    url = f"https://api.macvendors.com/{oui}"
+    api_token = "your_api_token_here"
+    mac_address_formatted = mac_address.replace(':', '').upper()
+    url = f"https://api.macvendors.com/v1/lookup/{mac_address_formatted}"
+    headers = {
+        "Authorization": f"Bearer {api_token}",
+        "Accept": "application/json"
+    }
     try:
-        response = requests.get(url)
+        response = requests.get(url, headers=headers)
         if response.status_code == 200:
-            return response.text
+            json_response = response.json()
+            return json_response['data']['organization_name']
         else:
             return ''
     except requests.exceptions.RequestException:
@@ -56,11 +62,7 @@ def process_btmgmt_output():
                     mac_address = mac_address_match.group(1)
                     rssi = rssi_match.group(1)
                     if mac_address not in found_devices:
-                        oui_info = get_oui_info(mac_address)
-                        if 'Organization' in oui_info:
-                            manufacturer = oui_info.split('\n')[1].split(': ')[1]
-                        else:
-                            manufacturer = ''
+                        manufacturer = get_oui_info(mac_address)
                     else:
                         manufacturer = found_devices[mac_address].get('Manufacturer', '')
                     name = additional_info.get('name', found_devices.get(mac_address, {}).get('Name', ''))
