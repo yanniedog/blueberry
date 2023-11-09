@@ -10,11 +10,10 @@ import time
 from colorama import Fore, Style, init
 
 init(autoreset=True)
-
-CSV_FILE_PATH = '/home/pi/bt.csv'
+CSV_FILE_PATH = '~/blueberry/detected.csv'
 
 def color_rssi(value):
-    if not value:  # Add this line to check for empty strings
+    if not value:
         return ''
     value = int(value)
     if value > -60:
@@ -25,7 +24,6 @@ def color_rssi(value):
         return Fore.RED + str(value) + Style.RESET_ALL
 
 def parse_btmgmt_output_line(line):
-    """Parse a line from btmgmt output and return a dictionary with additional information."""
     additional_info = {}
     name_match = re.search(r"name (.+)", line)
     if name_match:
@@ -33,7 +31,6 @@ def parse_btmgmt_output_line(line):
     return additional_info
 
 def get_oui_info(mac_address):
-    """Get the OUI information for the given MAC address."""
     oui = mac_address[:8].replace(':', '-').upper()
     url = f"https://api.macvendors.com/{oui}"
     try:
@@ -46,7 +43,6 @@ def get_oui_info(mac_address):
         return ''
 
 def process_btmgmt_output():
-    """Process the output of the btmgmt command and return a dictionary of found devices."""
     found_devices = {}
     process = subprocess.Popen(['btmgmt', 'find'], stdout=subprocess.PIPE, text=True)
     additional_info = {}
@@ -75,22 +71,19 @@ def process_btmgmt_output():
     update_csv(found_devices)
 
 def create_csv_file():
-    """Create a new CSV file with the appropriate header."""
-    with open(CSV_FILE_PATH, 'w', newline='') as csvfile:
+    with open(os.path.expanduser(CSV_FILE_PATH), 'w', newline='') as csvfile:
         fieldnames = ['MAC', 'Name', 'Manufacturer', 'RSSI', 'Min RSSI', 'Avg RSSI', 'Max RSSI', 'Last Seen']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
 
 def read_csv_file():
-    """Read the CSV file and return its contents as a list of dictionaries."""
-    with open(CSV_FILE_PATH, 'r', newline='') as csvfile:
+    with open(os.path.expanduser(CSV_FILE_PATH), 'r', newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         rows = [row for row in reader]
     return rows
 
 def write_csv_file(updated_rows):
-    """Write the updated rows to the CSV file."""
-    with open(CSV_FILE_PATH, 'w', newline='') as csvfile:
+    with open(os.path.expanduser(CSV_FILE_PATH), 'w', newline='') as csvfile:
         fieldnames = ['MAC', 'Name', 'Manufacturer', 'RSSI', 'Min RSSI', 'Avg RSSI', 'Max RSSI', 'Last Seen']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
@@ -98,8 +91,7 @@ def write_csv_file(updated_rows):
             writer.writerow(row)
 
 def update_csv(found_devices):
-    """Update the CSV file with the new devices found."""
-    if not os.path.exists(CSV_FILE_PATH):
+    if not os.path.exists(os.path.expanduser(CSV_FILE_PATH)):
         create_csv_file()
 
     rows = read_csv_file()
@@ -112,7 +104,7 @@ def update_csv(found_devices):
             rssi = int(device['RSSI'])
             min_rssi = min(int(row.get('Min RSSI', rssi)), rssi)
             max_rssi = max(int(row.get('Max RSSI', rssi)), rssi)
-            avg_rssi = (int(row.get('Avg RSSI', rssi)) + rssi) // 2  # Updated line
+            avg_rssi = (int(row.get('Avg RSSI', rssi)) + rssi) // 2
             last_seen = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             updated_row = {'MAC': mac, 'Name': device['Name'], 'Manufacturer': device['Manufacturer'],
                            'RSSI': rssi, 'Min RSSI': min_rssi, 'Avg RSSI': avg_rssi, 'Max RSSI': max_rssi, 'Last Seen': last_seen}
@@ -131,8 +123,8 @@ def update_csv(found_devices):
     write_csv_file(updated_rows)
 
 def read_and_display_csv():
-    if os.path.exists(CSV_FILE_PATH) and os.path.getsize(CSV_FILE_PATH) > 0:
-        with open(CSV_FILE_PATH, mode='r', newline='') as csvfile:
+    if os.path.exists(os.path.expanduser(CSV_FILE_PATH)) and os.path.getsize(os.path.expanduser(CSV_FILE_PATH)) > 0:
+        with open(os.path.expanduser(CSV_FILE_PATH), mode='r', newline='') as csvfile:
             reader = csv.DictReader(csvfile)
             print(f"{'Last Seen':<20}{'MAC':<20}{'RSSI':<10}{'Min':<10}{'Avg':<10}{'Max':<10}{'Name':<20}{'Manufacturer':<50}")
             for row in reader:
