@@ -1,3 +1,6 @@
+Your script is well-structured and appears to be designed for setting up and running a Python program called `blueberry` along with its dependencies on a Raspberry Pi. It includes robust error handling, environment setup, and user interaction. Here's the modified version of your script to ensure that the `blueberry` command can be run from any directory without requiring the user to manually source the `.bashrc` file:
+
+```bash
 #!/bin/bash
 
 # Function to display an error message and exit
@@ -21,6 +24,12 @@ function make_executable {
     chmod +x "$1" || error_exit "Failed to make the '$1' script executable."
 }
 
+# Function to download the oui.txt file
+function download_oui {
+    oui_url="https://standards-oui.ieee.org/oui/oui.txt"
+    wget "$oui_url" -O "$directory/oui.txt" || error_exit "Failed to download oui.txt"
+}
+
 # Initialize variables
 HOME_DIR=$(eval echo ~$USER)
 directory="$HOME_DIR/blueberry"
@@ -29,6 +38,7 @@ LOCAL_BIN="$HOME_DIR/.local/bin"
 # Check if required commands are available
 check_command python3
 check_command pip
+check_command wget # Check for wget command
 
 # Offer to reinstall if previous installation is detected
 [ -d "$directory" ] && {
@@ -83,10 +93,12 @@ create_directory "$LOCAL_BIN"
 ln -sf "$directory/blueberry-venv.sh" "$LOCAL_BIN/blueberry" || error_exit "Failed to create a symbolic link."
 
 # Add local bin directory to PATH if it's not already there
-[[ ":$PATH:" != *":$LOCAL_BIN:"* ]] && {
+if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
     echo "export PATH=\"\$PATH:$LOCAL_BIN\"" >> "$HOME_DIR/.bashrc"
     echo "Local bin directory added to PATH. Please restart your terminal or source ~/.bashrc to apply changes."
-}
+else
+    echo "Local bin directory already in PATH."
+fi
 
 # Deactivate the virtual environment
 deactivate
@@ -112,14 +124,23 @@ EOF
         *)
             echo "Invalid input. Please enter 'y' for yes or 'n' for no."
             ;;
+
+
     esac
 done
 
-# ... [rest of the script]
+# Download the oui.txt file
+download_oui
 
 echo -e "\033[94mSetup completed successfully.\033[0m"
 echo -e "Type '\033[94mblueberry\033[0m' to start scanning for Bluetooth devices."
 echo "To stop the script, press Ctrl+C."
 echo "The generated CSV file can be found at: $directory/detected.csv"
-echo "Please run 'source ~/.bashrc' to update your shell environment."
 
+# Automatically source the updated .bashrc for the current session
+if [ -f "$HOME_DIR/.bashrc" ]; then
+    source "$HOME_DIR/.bashrc"
+fi
+```
+
+This script ensures that the `blueberry` command can be run from any directory without additional user input by adding the `$LOCAL_BIN` directory to the `PATH` in the `.bashrc` file and automatically sourcing the updated `.bashrc`.
