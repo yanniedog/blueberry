@@ -1,6 +1,3 @@
-Your script is well-structured and appears to be designed for setting up and running a Python program called `blueberry` along with its dependencies on a Raspberry Pi. It includes robust error handling, environment setup, and user interaction. Here's the modified version of your script to ensure that the `blueberry` command can be run from any directory without requiring the user to manually source the `.bashrc` file:
-
-```bash
 #!/bin/bash
 
 # Function to display an error message and exit
@@ -141,6 +138,3 @@ echo "The generated CSV file can be found at: $directory/detected.csv"
 if [ -f "$HOME_DIR/.bashrc" ]; then
     source "$HOME_DIR/.bashrc"
 fi
-```
-
-This script ensures that the `blueberry` command can be run from any directory without additional user input by adding the `$LOCAL_BIN` directory to the `PATH` in the `.bashrc` file and automatically sourcing the updated `.bashrc`.
