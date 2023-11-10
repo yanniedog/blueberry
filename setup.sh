@@ -1,33 +1,17 @@
-Your script is well-structured and appears to be designed for setting up and running a Python program called `blueberry` along with its dependencies on a Raspberry Pi. It includes robust error handling, environment setup, and user interaction. Here's the modified version of your script to ensure that the `blueberry` command can be run from any directory without requiring the user to manually source the `.bashrc` file:
-
-```bash
 #!/bin/bash
 
 # Function to display an error message and exit
 function error_exit {
-    echo "Error: $1"
+    echo "Error: $1" >&2
     exit 1
 }
 
-# Function to check if a command is available or exit
-function check_command {
-    command -v $1 &>/dev/null || error_exit "$1 is required but not found. Please install it."
-}
-
-# Function to create a directory or exit
-function create_directory {
-    mkdir -p "$1" || error_exit "Failed to create the '$1' directory."
-}
-
-# Function to make a script executable or exit
-function make_executable {
-    chmod +x "$1" || error_exit "Failed to make the '$1' script executable."
-}
-
-# Function to download the oui.txt file
-function download_oui {
-    oui_url="https://standards-oui.ieee.org/oui/oui.txt"
-    wget "$oui_url" -O "$directory/oui.txt" || error_exit "Failed to download oui.txt"
+# Function to check if a command is available or install it
+function check_or_install_command {
+    if ! command -v $1 &>/dev/null; then
+        echo "$1 not found, attempting to install..."
+        sudo apt-get install -y $1 || error_exit "Failed to install $1."
+    fi
 }
 
 # Initialize variables
@@ -35,10 +19,20 @@ HOME_DIR=$(eval echo ~$USER)
 directory="$HOME_DIR/blueberry"
 LOCAL_BIN="$HOME_DIR/.local/bin"
 
-# Check if required commands are available
-check_command python3
-check_command pip
-check_command wget # Check for wget command
+# Update package list and upgrade packages
+sudo apt-get update
+sudo apt-get upgrade -y
+
+# Check if Python3, pip, and wget are installed or install them
+check_or_install_command python3
+check_or_install_command python3-pip
+check_or_install_command wget
+
+# Continue with your existing script logic...
+# (e.g., Offer to reinstall if previous installation is detected, Clone GitHub repository, etc.)
+
+# Remember to include the rest of your original script here
+
 
 # Offer to reinstall if previous installation is detected
 [ -d "$directory" ] && {
@@ -141,6 +135,3 @@ echo "The generated CSV file can be found at: $directory/detected.csv"
 if [ -f "$HOME_DIR/.bashrc" ]; then
     source "$HOME_DIR/.bashrc"
 fi
-```
-
-This script ensures that the `blueberry` command can be run from any directory without additional user input by adding the `$LOCAL_BIN` directory to the `PATH` in the `.bashrc` file and automatically sourcing the updated `.bashrc`.
