@@ -10,19 +10,22 @@ import time
 from colorama import Fore, Style, init
 import statistics
 
-# Configuration and Initialization
 config = configparser.ConfigParser()
 config_file_path = 'config.me'
 print(f"Reading configuration from {config_file_path}")
 config.read(config_file_path)
+unrecognized_mac_cache = set()  # Initialize the cache for unrecognized MAC addresses
 
 CSV_FILE_PATH = config.get('DEFAULT', 'CSV_FILE_PATH', fallback='~/blueberry/detected.csv')
 API_TOKEN = config.get('DEFAULT', 'API_TOKEN', fallback='your_api_token_here')
 OUI_FILE_PATH = config.get('DEFAULT', 'OUI_FILE_PATH', fallback='~/blueberry/oui.txt')
+SORT_COLUMN_NUMBER = int(config.get('DEFAULT', 'sort_column_number', fallback='1')) - 1 # Subtract 1 to make it 0-indexed
+SORT_ORDER = config.get('DEFAULT', 'sort_order', fallback='ascending')
+SORT_KEY = config.get('DEFAULT', 'sort_key', fallback='RSSI')  # Fallback to 'RSSI' if not specified
 
 init(autoreset=True)
 
-# Load OUI data
+oui_cache = {}
 oui_data = {}
 with open(os.path.expanduser(OUI_FILE_PATH), 'r') as file:
     for line in file:
@@ -32,12 +35,12 @@ with open(os.path.expanduser(OUI_FILE_PATH), 'r') as file:
             company_name = parts[1].strip()
             oui_data[mac_prefix] = company_name
 
-# Helper Functions
-
-def color_rssi(value):
+def color_rssi(value, colorize=True):
     if not value:
         return ''
-    value = int(float(value))  # Convert to float first, then to int
+    value = int(float(value))
+    if not colorize:
+        return Fore.LIGHTBLACK_EX + str(value) + Style.RESET_ALL
     if value >= -60:
         return Fore.GREEN + str(value) + Style.RESET_ALL
     elif value >= -70:
@@ -45,65 +48,67 @@ def color_rssi(value):
     else:
         return Fore.RED + str(value) + Style.RESET_ALL
 
-def parse_btmgmt_output_line(line):
-    additional_info = {}
+def parse_btmgmt_output_line(line, current_mac_address, found_devices):
     name_match = re.search(r"name\s(.+)$", line.strip())
-    if name_match:
-        additional_info['name'] = name_match.group(1).strip()
-        print(f"Found name: {additional_info['name']} for line: {line}")  # Debugging print
-    return additional_info
+    if name_match and current_mac_address and current_mac_address in found_devices:
+        name = name_match.group(1).strip()
+        print(f"Found name: {name} for MAC address: {current_mac_address}")
+        found_devices[current_mac_address]['Name'] = name
+        return {'name': name}
+    else:
+        return {}
 
-# Cache for unrecognized MAC addresses
-unrecognized_mac_cache = set()
 
-# Function to get OUI info from file
 def get_oui_info_from_file(mac_address):
     mac_prefix = mac_address.replace(':', '')[:6].upper()
     return oui_data.get(mac_prefix)
 
-# Function to get OUI info from API with retry and rate limiting
 last_api_request_time = 0
 api_usage = {'count': 0, 'reset_time': datetime.now()}
+total_loops = 0
 
 def check_api_request_limit():
-    global api_usage  # Declare api_usage as a global variable
+    global api_usage
     current_time = datetime.now()
     if current_time > api_usage['reset_time']:
         api_usage = {'count': 0, 'reset_time': current_time + timedelta(days=1)}
     return api_usage['count'] < 1000
 
 def increment_api_usage():
-    global api_usage  # Declare api_usage as a global variable
+    global api_usage
     api_usage['count'] += 1
 
 def get_oui_info(mac_address):
-    global last_api_request_time, api_usage, unrecognized_mac_cache
+    global last_api_request_time, api_usage, unrecognized_mac_cache, oui_cache
 
-    # Check if MAC address is in the unrecognized cache
+    # Check cache first
+    if mac_address in oui_cache:
+        return oui_cache[mac_address]
+
     if mac_address in unrecognized_mac_cache:
         return None
 
-    # Rate limiting check
     if not check_api_request_limit():
         print("API request limit reached")
         return None
 
-    # Ensuring a gap of at least 1 second between API requests
     current_time = time.time()
     time_since_last_request = current_time - last_api_request_time
-    if time_since_last_request < 1:
-        time.sleep(1 - time_since_last_request)
+    # if time_since_last_request < 10:  # Increase delay to 10 seconds
+    #     time.sleep(10 - time_since_last_request)
 
     url = f"https://api.macvendors.com/{mac_address}"
     try:
         response = requests.get(url)
-        last_api_request_time = time.time()  # Update the last request time to current time
+        last_api_request_time = time.time()
         increment_api_usage()
 
         if response.status_code == 200:
+            # Add successful response to cache
+            oui_cache[mac_address] = response.text.strip()
             return response.text.strip()
         elif response.status_code == 404:
-            unrecognized_mac_cache.add(mac_address)  # Add to cache
+            unrecognized_mac_cache.add(mac_address)
             print(f"MAC address {mac_address} not found in API.")
             return None
         else:
@@ -113,7 +118,6 @@ def get_oui_info(mac_address):
         print(f"API request failed: {e}")
         return None
 
-# Function to update CSV
 def update_csv(found_devices):
     if not os.path.exists(os.path.expanduser(CSV_FILE_PATH)):
         create_csv_file()
@@ -138,9 +142,11 @@ def update_csv(found_devices):
             first_seen = existing_row.get('First Seen', last_seen)
             dur = str(timedelta(seconds=(datetime.strptime(last_seen, '%Y-%m-%d %H:%M:%S') - datetime.strptime(first_seen, '%Y-%m-%d %H:%M:%S')).total_seconds())).split('.')[0]
             sd = round(statistics.stdev(rssi_list) if len(rssi_list) > 1 else 0, 2)
+            print(f"Updating existing row for MAC {mac} with name {device['Name']}")
             existing_row.update({
                 'First Seen': first_seen,
                 'Last Seen': last_seen,
+                'MAC': mac,
                 'RSSI': rssi,
                 'Min RSSI': min_rssi,
                 'Mean RSSI': mean_rssi,
@@ -148,11 +154,14 @@ def update_csv(found_devices):
                 'sd': sd,
                 'Dur': dur,
                 'Manufacturer': manufacturer_info,
-                'rssi_list': ','.join(map(str, rssi_list))
+                'rssi_list': ','.join(map(str, rssi_list)),
+                'Name': device['Name'] if device['Name'] else existing_row.get('Name', ''),
+                'Seen Count': int(existing_row.get('Seen Count', '0')) + 1
             })
             updated_rows.append(existing_row)
         else:
             first_seen = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            print(f"Adding new row for MAC {mac} with name {device['Name']}")
             new_row = {
                 'First Seen': first_seen,
                 'Last Seen': first_seen,
@@ -164,17 +173,18 @@ def update_csv(found_devices):
                 'sd': 0,
                 'Dur': '0:00:00',
                 'Manufacturer': manufacturer_info,
-                'rssi_list': device['RSSI']
+                'rssi_list': device['RSSI'],
+                'Name': device['Name'],
+                'Seen Count': 1
             }
             updated_rows.append(new_row)
 
     updated_rows.extend([item for item in existing_data if item['MAC'] not in found_devices])
     write_csv_file(updated_rows)
 
-# CSV file handling functions
 def create_csv_file():
     with open(os.path.expanduser(CSV_FILE_PATH), 'w', newline='') as csvfile:
-        fieldnames = ['First Seen', 'Last Seen', 'MAC', 'RSSI', 'Min RSSI', 'Mean RSSI', 'Max RSSI', 'sd', 'Dur', 'Manufacturer', 'rssi_list']
+        fieldnames = ['Last Seen', 'First Seen', 'MAC', 'Name', 'RSSI', 'Min RSSI', 'Mean RSSI', 'Max RSSI', 'sd', 'Dur', 'Manufacturer', 'rssi_list', 'Seen Count']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
 
@@ -187,85 +197,110 @@ def read_csv_file():
 
 def write_csv_file(rows):
     with open(os.path.expanduser(CSV_FILE_PATH), 'w', newline='') as csvfile:
-        fieldnames = ['First Seen', 'Last Seen', 'MAC', 'RSSI', 'Min RSSI', 'Mean RSSI', 'Max RSSI', 'sd', 'Dur', 'Manufacturer', 'rssi_list']
+        fieldnames = ['Last Seen', 'First Seen', 'MAC', 'Name', 'RSSI', 'Min RSSI', 'Mean RSSI', 'Max RSSI', 'sd', 'Dur', 'Manufacturer', 'rssi_list', 'Seen Count']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
-        for row in rows:
+        for row in sorted(rows, key=lambda x: int(float(x['RSSI'])), reverse=True):
             writer.writerow(row)
 
-# Function to process Bluetooth management output
 def process_btmgmt_output():
+    global total_loops, oui_cache
+    api_call_made = False
+    print("Starting process_btmgmt_output")
     found_devices = {}
     process = subprocess.Popen(['sudo', 'btmgmt', 'find'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    current_mac_address = None
     try:
         while True:
             line = process.stdout.readline()
             if not line:
                 break
-            additional_info = parse_btmgmt_output_line(line)
             if "dev_found" in line:
                 mac_address_match = re.search(r": ([\dA-F]{2}:[\dA-F]{2}:[\dA-F]{2}:[\dA-F]{2}:[\dA-F]{2}:[\dA-F]{2})", line)
+                if mac_address_match:
+                    current_mac_address = mac_address_match.group(1)
+                    if not api_call_made and current_mac_address not in oui_cache:
+                        oui_info = get_oui_info(current_mac_address)
+                        if oui_info is not None:
+                            api_call_made = True
+                        found_devices[current_mac_address] = {
+                            'MAC': current_mac_address,
+                            'RSSI': '',
+                            'OUI_Info': oui_info,
+                            'Name': ''
+                        }
+            additional_info = parse_btmgmt_output_line(line, current_mac_address, found_devices)
+            if "dev_found" in line and current_mac_address in found_devices:
                 rssi_match = re.search(r"rssi (-\d+)", line)
-                if mac_address_match and rssi_match:
-                    mac_address = mac_address_match.group(1)
+                if rssi_match:
                     rssi = rssi_match.group(1)
-                    oui_info = get_oui_info_from_file(mac_address)
-                    if not oui_info:
-                        oui_info = get_oui_info(mac_address)
-                    found_devices[mac_address] = {
-                        'MAC': mac_address,
-                        'RSSI': rssi,
-                        'OUI_Info': oui_info,
-                        'Name': additional_info.get('name', '')
-                    }
+                    found_devices[current_mac_address]['RSSI'] = rssi
+
     finally:
         process.stdout.close()
         process.wait()
     update_csv(found_devices)
+    print("Ending process_btmgmt_output")
+
+
 
 def read_and_display_csv():
+    print("Starting read_and_display_csv")
     if os.path.exists(os.path.expanduser(CSV_FILE_PATH)) and os.path.getsize(os.path.expanduser(CSV_FILE_PATH)) > 0:
         with open(os.path.expanduser(CSV_FILE_PATH), mode='r', newline='') as csvfile:
             reader = csv.DictReader(csvfile)
-            # Print the column headers
-            print(f"{'First Seen':<20} {'Last Seen':<20} {'MAC':<20} {'RSSI':<7} {'Min':<7} {'Mean':<7} {'Max':<7} {'sd':<7} {'Dur':<10} {'Manufacturer':<30}")
-            # Print each row of data
-            for row in reader:
-                first_seen = row.get('First Seen', '').ljust(20)
-                last_seen = row.get('Last Seen', '').ljust(20)
-                mac = row.get('MAC', '').ljust(20)
-                rssi = row.get('RSSI', '0')
-                min_rssi = row.get('Min RSSI', '0')
-                mean_rssi = row.get('Mean RSSI', '0')
-                max_rssi = row.get('Max RSSI', '0')
-                sd = row.get('sd', '0')
-                dur = row.get('Dur', '00:00:00').ljust(10)
-                manufacturer = row.get('Manufacturer', '').ljust(30)
+            print(f"{'Last Seen':<20} {'First Seen':<20} {'MAC':<18} {'% seen':<8} {'RSSI':<7} {'Min':<7} {'Mean':<7} {'Max':<7} {'sd':<7} {'Dur':<10} {'Manufacturer':<30}")
 
-                # Apply color and calculate the length of non-printing color characters
-                rssi_colored = color_rssi(rssi)
-                non_printing_length_rssi = len(rssi_colored) - len(rssi)
-                rssi_padded = rssi_colored.ljust(7 + non_printing_length_rssi)
+            rows = [row for row in reader]
+            rows.sort(key=lambda x: x.get(SORT_KEY, ""), reverse=(SORT_ORDER == 'descending'))
 
-                min_rssi_colored = color_rssi(min_rssi)
-                non_printing_length_min_rssi = len(min_rssi_colored) - len(min_rssi)
-                min_rssi_padded = min_rssi_colored.ljust(7 + non_printing_length_min_rssi)
+            if rows:  # Check if rows is not empty
+                for row in rows:
+                    last_seen = row.get('Last Seen', '').ljust(20)
+                    first_seen = row.get('First Seen', '').ljust(20)
+                    mac = row.get('MAC', '').ljust(18) # determines gap between MAC and % seen (18 is a good number)
+                    name = row.get('Name', '').ljust(0)
+                    rssi = row.get('RSSI', '0')
+                    min_rssi = row.get('Min RSSI', '0')
+                    mean_rssi = row.get('Mean RSSI', '0')
+                    max_rssi = row.get('Max RSSI', '0')
+                    sd = row.get('sd', '0').ljust(7) # determines the gap between sd and Dur
+                    dur = row.get('Dur', '00:00:00').ljust(10) 
+                    manufacturer = row.get('Manufacturer', '').ljust(0) # determines the gap between RSSI and Min. 0 is a good number
+                    seen_count = row.get('Seen Count', '0')
 
-                mean_rssi_colored = color_rssi(mean_rssi)
-                non_printing_length_mean_rssi = len(mean_rssi_colored) - len(mean_rssi)
-                mean_rssi_padded = mean_rssi_colored.ljust(7 + non_printing_length_mean_rssi)
+                    colorize = (datetime.now() - datetime.strptime(last_seen.strip(), '%Y-%m-%d %H:%M:%S')).total_seconds() < 10
 
-                max_rssi_colored = color_rssi(max_rssi)
-                non_printing_length_max_rssi = len(max_rssi_colored) - len(max_rssi)
-                max_rssi_padded = max_rssi_colored.ljust(7 + non_printing_length_max_rssi)
+                    rssi_padded = color_rssi(rssi, colorize).ljust(16)  # determines the gap between RSSI and Min. 10 is a good number
+                    min_rssi_padded = color_rssi(min_rssi, colorize).ljust(16) # determines the gap between Min and Avg RSSI. 13 is a good number
+                    mean_rssi_padded = color_rssi(mean_rssi, colorize).ljust(16)
+                    max_rssi_padded = color_rssi(max_rssi, colorize).ljust(16)
+                    sd_padded = (Fore.LIGHTBLACK_EX if not colorize else '') + sd.ljust(7) + Style.RESET_ALL
+                    dur_padded = (Fore.LIGHTBLACK_EX if not colorize else '') + dur.ljust(10) + Style.RESET_ALL
+                    manufacturer_padded = (Fore.LIGHTBLACK_EX if not colorize else '') + manufacturer.ljust(0) + Style.RESET_ALL
 
-                print(f"{first_seen} {last_seen} {mac} {rssi_padded} {min_rssi_padded} {mean_rssi_padded} {max_rssi_padded} {sd:<7} {dur} {manufacturer}")
+                    loops = max(1, total_loops)
+                    seen_percentage = (Fore.LIGHTBLACK_EX if not colorize else '') + f"{int(row.get('Seen Count', '0')) / loops * 100:.2f}%".ljust(8) + Style.RESET_ALL # determines the gap between % Seen (Name) and RSSI. 7 is a good number
+
+                    # Concatenate Name with Manufacturer
+                    manufacturer_info = row.get('Manufacturer', '')
+                    if row.get('Name'):
+                        manufacturer_info += f" ({row.get('Name')})"
+
+                    print(f"{last_seen} {first_seen} {mac} {seen_percentage} {rssi_padded} {min_rssi_padded} {mean_rssi_padded} {max_rssi_padded} {sd} {dur} {manufacturer_info.ljust(30)}")
+            else:
+                print("No data found in the CSV file.")
     else:
-        print("No data found in the CSV file.")
+        print("CSV file does not exist or is empty.")
 
-# Main Loop
 if __name__ == "__main__":
     while True:
+        print("Starting main loop iteration")
         process_btmgmt_output()
-        read_and_display_csv()  # Add this line to display the table
+
+        total_loops += 1  # Increment total_loops here
+        print(f"Debug - Total Loops: {total_loops}")
+
+        read_and_display_csv()
         time.sleep(10)
+
