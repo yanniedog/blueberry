@@ -218,7 +218,6 @@ def process_btmgmt_output():
                         'OUI_Info': oui_info,
                         'Name': additional_info.get('name', '')
                     }
-                    print(f"Processed device: {found_devices[mac_address]}")  # Debugging print
     finally:
         process.stdout.close()
         process.wait()
