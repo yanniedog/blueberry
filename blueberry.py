@@ -34,6 +34,15 @@ with open(os.path.expanduser(OUI_FILE_PATH), 'r') as file:
             mac_prefix = parts[0].strip().replace('-', '').upper()
             company_name = parts[1].strip()
             oui_data[mac_prefix] = company_name
+            
+# load the unique ID generated during setup.sh
+def load_environment():
+    with open('env.dat', 'r') as file:
+        for line in file:
+            if 'unique_id' in line:
+                return line.split('=')[1].strip().strip("'")
+
+unique_id = load_environment()
 
 def color_rssi(value, colorize=True):
     if not value:
