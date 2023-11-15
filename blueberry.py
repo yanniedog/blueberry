@@ -1,3 +1,27 @@
+OUI_FILE_PATH = 'oui.txt'
+def load_oui_data(oui_file_path):
+    oui_data = {}
+    try:
+        with open(oui_file_path, 'r') as file:
+            for line in file:
+                if "(base 16)" in line:
+                    parts = line.split("(base 16)")
+                    mac_prefix = parts[0].strip().replace('-', '').upper()
+                    company_name = parts[1].strip()
+                    oui_data[mac_prefix] = company_name
+        logging.info(f"Loaded {len(oui_data)} OUI entries.")
+    except Exception as e:
+        logging.error(f"Error loading OUI data: {e}")
+    
+    test_prefix = 'B827EB'
+    if test_prefix in oui_data:
+        print(f"{test_prefix} found: {oui_data[test_prefix]}")
+    else:
+        print(f"{test_prefix} not found in OUI data.")
+    
+    return oui_data
+
+
 import csv
 import os
 import re
@@ -10,12 +34,20 @@ import time
 from colorama import Fore, Style, init
 import statistics
 import uuid
+import logging
+
+# Initialize global variables
+api_usage = {'count': 0, 'reset_time': datetime.now() + timedelta(days=1)}
+last_api_request_time = 0
+total_loops = 0
+
 
 config = configparser.ConfigParser()
 config_file_path = 'config.me'
 print(f"Reading configuration from {config_file_path}")
 config.read(config_file_path)
 unrecognized_mac_cache = set()  # Initialize the cache for unrecognized MAC addresses
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 CSV_FILE_PATH = config.get('DEFAULT', 'CSV_FILE_PATH', fallback='~/blueberry/detected.csv')
 API_TOKEN = config.get('DEFAULT', 'API_TOKEN', fallback='your_api_token_here')
@@ -27,7 +59,8 @@ SORT_KEY = config.get('DEFAULT', 'sort_key', fallback='RSSI')  # Fallback to 'RS
 init(autoreset=True)
 
 oui_cache = {}
-oui_data = {}
+oui_data = load_oui_data(os.path.expanduser(OUI_FILE_PATH))
+
 with open(os.path.expanduser(OUI_FILE_PATH), 'r') as file:
     for line in file:
         if "(base 16)" in line:
@@ -36,6 +69,8 @@ with open(os.path.expanduser(OUI_FILE_PATH), 'r') as file:
             company_name = parts[1].strip()
             oui_data[mac_prefix] = company_name
             
+
+           
 def load_environment():
     home_dir = os.path.expanduser('~')  # This gets the home directory
     env_file = os.path.join(home_dir, 'blueberry', 'env.dat')  # Construct the path to env.dat
@@ -77,13 +112,20 @@ def parse_btmgmt_output_line(line, current_mac_address, found_devices):
         return {}
 
 
-def get_oui_info_from_file(mac_address):
-    mac_prefix = mac_address.replace(':', '')[:6].upper()
-    return oui_data.get(mac_prefix)
+def get_oui_info_from_file(mac_address, oui_data):
+    try:
+        mac_prefix = mac_address.replace(':', '')[:6].upper()
+        if mac_prefix in oui_data:
+            logging.info(f"OUI for MAC prefix {mac_prefix} found in file.")
+            return oui_data[mac_prefix]
+        else:
+            logging.warning(f"MAC prefix {mac_prefix} not found in OUI data.")
+            return None
+    except Exception as e:
+        logging.error(f"Error in get_oui_info_from_file: {e}")
+        return None
 
-last_api_request_time = 0
-api_usage = {'count': 0, 'reset_time': datetime.now()}
-total_loops = 0
+
 
 def check_api_request_limit():
     global api_usage
@@ -99,7 +141,12 @@ def increment_api_usage():
 def get_oui_info(mac_address):
     global last_api_request_time, api_usage, unrecognized_mac_cache, oui_cache
 
-    # Check cache first
+    # Check local OUI data first
+    oui_info_from_file = get_oui_info_from_file(mac_address, oui_data)
+    if oui_info_from_file:
+        return oui_info_from_file
+
+    # If not found in local file, check cache
     if mac_address in oui_cache:
         return oui_cache[mac_address]
 
