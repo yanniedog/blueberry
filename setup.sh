@@ -76,8 +76,8 @@ serial=$(cat /proc/cpuinfo | grep Serial | cut -d ' ' -f 2)
 timestamp=$(date +%s) # Current Unix timestamp
 hash=$(echo -n "${serial}${timestamp}" | sha256sum | cut -c1-6) # First 6 characters of the SHA-256 hash
 
-# Insert the generated unique identifier into blueberry.py as a global variable
-echo "unique_id = '${hash}'" >> blueberry.py
+# Insert the generated unique identifier into env.dat as a global variable
+echo "unique_id = '${hash}'" > env.dat
 
 # Create and activate a virtual environment
 python3 -m venv venv || error_exit "Failed to create the virtual environment."
