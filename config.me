@@ -1,5 +1,16 @@
 [DEFAULT]
 CSV_FILE_PATH = ~/blueberry/detected.csv
 API_TOKEN = your_api_token_here
-sort_key = Mean  # Replace with the desired column name for sorting
-sort_order = descending
+
+# Sorting configurations
+sort_key_1 = Mean  # First tier sort key
+sort_order_1 = descending  # First tier sort order
+
+sort_key_2 = Last Seen  # Second tier sort key
+sort_order_2 = ascending  # Second tier sort order
+
+sort_key_3 = RSSI  # Third tier sort key
+sort_order_3 = descending  # Third tier sort order
+
+sort_key_4 = First Seen  # Fourth tier sort key
+sort_order_4 = ascending  # Fourth tier sort order
