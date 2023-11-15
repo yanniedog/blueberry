@@ -37,7 +37,10 @@ with open(os.path.expanduser(OUI_FILE_PATH), 'r') as file:
             
 # load the unique ID generated during setup.sh
 def load_environment():
-    with open('env.dat', 'r') as file:
+    home_dir = os.path.expanduser('~')  # This gets the home directory
+    env_file = os.path.join(home_dir, 'blueberry', 'env.dat')  # Construct the path to env.dat
+
+    with open(env_file, 'r') as file:
         for line in file:
             if 'unique_id' in line:
                 return line.split('=')[1].strip().strip("'")
