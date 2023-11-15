@@ -14,7 +14,7 @@ Blueberry is a tool for tracking Bluetooth devices using a Raspberry Pi. It scan
 To install Blueberry, run the following command in your terminal:
 
 ```sh
-bash <(curl -s https://raw.githubusercontent.com/yanniedog/blueberry/master/setup.sh)
+bash <(curl -s https://raw.githubusercontent.com/yanniedog/blueberry/setup.sh)
 ```
 
 This command downloads and executes the setup script, which will:
