@@ -14,6 +14,19 @@ function check_or_install_command {
     fi
 }
 
+# Function to create a directory if it does not exist
+function create_directory {
+    if [ ! -d "$1" ]; then
+        mkdir -p "$1" || error_exit "Failed to create directory $1."
+    fi
+}
+
+# Function to make a file executable
+function make_executable {
+    chmod +x "$1" || error_exit "Failed to make file $1 executable."
+}
+
+
 # Initialize variables
 HOME_DIR=$(eval echo ~$USER)
 directory="$HOME_DIR/blueberry"
