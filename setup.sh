@@ -32,28 +32,11 @@ function download_oui {
     wget -O oui.txt http://standards-oui.ieee.org/oui/oui.txt || error_exit "Failed to download the oui.txt file."
 }
 
-
-# Initialize variables
+# Gather user inputs
 HOME_DIR=$(eval echo ~$USER)
 directory="$HOME_DIR/blueberry"
 LOCAL_BIN="$HOME_DIR/.local/bin"
 
-# Update package list and upgrade packages
-sudo apt-get update
-sudo apt-get upgrade -y
-
-# Check if Python3, pip, and wget are installed or install them
-check_or_install_command python3
-check_or_install_command python3-pip
-check_or_install_command wget
-
-# Continue with your existing script logic...
-# (e.g., Offer to reinstall if previous installation is detected, Clone GitHub repository, etc.)
-
-# Remember to include the rest of your original script here
-
-
-# Offer to reinstall if previous installation is detected
 [ -d "$directory" ] && {
     echo -e "Previous installation detected at $directory."
     read -p "Would you like to proceed with reinstalling? (y/n): " -n 1 -r
@@ -64,6 +47,32 @@ check_or_install_command wget
     echo "Previous installation removed."
 }
 
+while true; do
+    read -p "Do you have a macvendors API token? (y/n): " -n 1 -r response
+    echo
+    case $response in
+        [Yy])
+            read -p "Enter your macvendors API token: " macvendors_api_token
+            break
+            ;;
+        [Nn])
+            echo "Proceeding without macvendors API token..."
+            break
+            ;;
+        *)
+            echo "Invalid input. Please enter 'y' for yes or 'n' for no."
+            ;;
+    esac
+done
+# Update package list and upgrade packages
+sudo apt-get update
+sudo apt-get upgrade -y
+
+# Check if Python3, pip, and wget are installed or install them
+check_or_install_command python3
+check_or_install_command python3-pip
+check_or_install_command wget
+
 # Create the directory
 create_directory "$directory"
 
@@ -71,12 +80,12 @@ create_directory "$directory"
 cd "$directory" || error_exit "Failed to change directory to '$directory'."
 git clone https://github.com/yanniedog/blueberry.git . || error_exit "Failed to clone the repository."
 
-# Generate a unique 6-character code based on timestamp and serial number
+# Generate a unique 6-character code
 serial=$(cat /proc/cpuinfo | grep Serial | cut -d ' ' -f 2)
-timestamp=$(date +%s) # Current Unix timestamp
-hash=$(echo -n "${serial}${timestamp}" | sha256sum | cut -c1-6) # First 6 characters of the SHA-256 hash
+timestamp=$(date +%s)
+hash=$(echo -n "${serial}${timestamp}" | sha256sum | cut -c1-6)
 
-# Insert the generated unique identifier into env.dat as a global variable
+# Insert the unique identifier into env.dat
 echo "unique_id = '${hash}'" > env.dat
 
 # Create and activate a virtual environment
@@ -93,16 +102,9 @@ make_executable "blueberry.py"
 cat > "$directory/blueberry-venv.sh" <<EOF
 #!/bin/bash
 
-# Define the actual directory of the blueberry installation
 BLUEBERRY_DIR="$directory"
-
-# Activate the virtual environment
 source "\$BLUEBERRY_DIR/venv/bin/activate"
-
-# Run the blueberry.py script
 python "\$BLUEBERRY_DIR/blueberry.py"
-
-# Deactivate the virtual environment when done
 deactivate
 EOF
 make_executable "$directory/blueberry-venv.sh"
@@ -124,31 +126,12 @@ fi
 # Deactivate the virtual environment
 deactivate
 
-# Prompt for macvendors API token and update the config file
-while true; do
-    read -p "Do you have a macvendors API token? (y/n): " -n 1 -r response
-    echo
-    case $response in
-        [Yy])
-            read -p "Enter your macvendors API token: " macvendors_api_token
-            cat >"$directory/config.me" <<EOF
+# Update config file with the API token
+cat >"$directory/config.me" <<EOF
 [DEFAULT]
 CSV_FILE_PATH = $directory/detected.csv
 API_TOKEN = $macvendors_api_token
 EOF
-            break
-            ;;
-        [Nn])
-            echo "Proceeding without macvendors API token..."
-            break
-            ;;
-        *)
-            echo "Invalid input. Please enter 'y' for yes or 'n' for no."
-            ;;
-
-
-    esac
-done
 
 # Download the oui.txt file
 download_oui
