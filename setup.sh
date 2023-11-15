@@ -49,7 +49,6 @@ LOCAL_BIN="$HOME_DIR/.local/bin"
     echo "Previous installation removed."
 }
 
-
 while true; do
     read -p "Do you have a macvendors API token? (y/n): " -n 1 -r response
     echo
@@ -66,7 +65,8 @@ while true; do
             echo "Invalid input. Please enter 'y' for yes or 'n' for no."
             ;;
     esac
-}
+done
+
 # Update package list and upgrade packages
 sudo apt-get update
 sudo apt-get upgrade -y
