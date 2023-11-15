@@ -29,7 +29,7 @@ function make_executable {
 # Function to download the oui.txt file
 function download_oui {
     echo "Downloading the oui.txt file..."
-    wget -O oui.txt http://standards-oui.ieee.org/oui/oui.txt || error_exit "Failed to download the oui.txt file."
+    wget -O "$OUI_FILE_PATH" http://standards-oui.ieee.org/oui/oui.txt || error_exit "Failed to download the oui.txt file."
 }
 
 # Gather user inputs
@@ -63,7 +63,7 @@ while true; do
             echo "Invalid input. Please enter 'y' for yes or 'n' for no."
             ;;
     esac
-done
+}
 # Update package list and upgrade packages
 sudo apt-get update
 sudo apt-get upgrade -y
@@ -131,6 +131,7 @@ cat >"$directory/config.me" <<EOF
 [DEFAULT]
 CSV_FILE_PATH = $directory/detected.csv
 API_TOKEN = $macvendors_api_token
+OUI_FILE_PATH = $directory/oui.txt
 EOF
 
 # Download the oui.txt file
