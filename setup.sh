@@ -32,8 +32,10 @@ function download_oui {
     wget -O "$OUI_FILE_PATH" http://standards-oui.ieee.org/oui/oui.txt || error_exit "Failed to download the oui.txt file."
 }
 
-# Gather user inputs
+# Determine the home directory
 HOME_DIR=$(eval echo ~$USER)
+
+# Gather user inputs
 directory="$HOME_DIR/blueberry"
 LOCAL_BIN="$HOME_DIR/.local/bin"
 
