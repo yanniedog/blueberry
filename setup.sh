@@ -26,6 +26,12 @@ function make_executable {
     chmod +x "$1" || error_exit "Failed to make file $1 executable."
 }
 
+# Function to download the oui.txt file
+function download_oui {
+    echo "Downloading the oui.txt file..."
+    wget -O oui.txt http://standards-oui.ieee.org/oui/oui.txt || error_exit "Failed to download the oui.txt file."
+}
+
 
 # Initialize variables
 HOME_DIR=$(eval echo ~$USER)
