@@ -49,6 +49,7 @@ LOCAL_BIN="$HOME_DIR/.local/bin"
     echo "Previous installation removed."
 }
 
+
 while true; do
     read -p "Do you have a macvendors API token? (y/n): " -n 1 -r response
     echo
