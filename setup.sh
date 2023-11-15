@@ -26,12 +26,15 @@ function make_executable {
     chmod +x "$1" || error_exit "Failed to make file $1 executable."
 }
 
+
+
 # Function to download the oui.txt file
 function download_oui {
-    echo "Downloading the oui.txt file..."
+    echo "Downloading the oui.txt file to $OUI_FILE_PATH..."
     create_directory "$(dirname "$OUI_FILE_PATH")" # Ensure the directory exists
     wget -O "$OUI_FILE_PATH" http://standards-oui.ieee.org/oui/oui.txt || error_exit "Failed to download the oui.txt file."
 }
+
 
 # Determine the home directory
 HOME_DIR=$(eval echo ~$USER)
@@ -136,6 +139,9 @@ CSV_FILE_PATH = $directory/detected.csv
 API_TOKEN = $macvendors_api_token
 OUI_FILE_PATH = $directory/oui.txt
 EOF
+
+# Set the OUI_FILE_PATH
+OUI_FILE_PATH=$directory/oui.txt
 
 # Download the oui.txt file
 download_oui
