@@ -52,6 +52,14 @@ create_directory "$directory"
 cd "$directory" || error_exit "Failed to change directory to '$directory'."
 git clone https://github.com/yanniedog/blueberry.git . || error_exit "Failed to clone the repository."
 
+# Generate a unique 6-character code based on timestamp and serial number
+serial=$(cat /proc/cpuinfo | grep Serial | cut -d ' ' -f 2)
+timestamp=$(date +%s) # Current Unix timestamp
+hash=$(echo -n "${serial}${timestamp}" | sha256sum | cut -c1-6) # First 6 characters of the SHA-256 hash
+
+# Insert the generated unique identifier into blueberry.py as a global variable
+echo "unique_id = '${hash}'" >> blueberry.py
+
 # Create and activate a virtual environment
 python3 -m venv venv || error_exit "Failed to create the virtual environment."
 source venv/bin/activate || error_exit "Failed to activate the virtual environment."
